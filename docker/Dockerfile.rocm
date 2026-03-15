@@ -38,10 +38,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Build the HIP submodule extensions (PyTorch ROCm redirects nvcc → hipcc)
+# --no-build-isolation because setup.py imports torch at the top level
 COPY submodules/ submodules/
-RUN pip install --no-cache-dir submodules/diff-gaussian-rasterization_fastgs && \
-    pip install --no-cache-dir submodules/simple-knn && \
-    pip install --no-cache-dir submodules/fused-ssim
+RUN pip install --no-cache-dir --no-build-isolation submodules/diff-gaussian-rasterization_fastgs && \
+    pip install --no-cache-dir --no-build-isolation submodules/simple-knn && \
+    pip install --no-cache-dir --no-build-isolation submodules/fused-ssim
 
 # Copy the rest of the project
 COPY . .
