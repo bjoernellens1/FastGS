@@ -5,11 +5,10 @@
 #                   -v $(pwd):/workspace fastgs:dev-cuda
 
 ARG PYTORCH_VERSION=2.5.1
-ARG CUDA_VERSION=12.4.1
-ARG CUDNN_VERSION=9
+ARG CUDA_VERSION=12.1.1
 ARG UBUNTU_VERSION=22.04
 
-FROM nvidia/cuda:${CUDA_VERSION}-cudnn${CUDNN_VERSION}-devel-ubuntu${UBUNTU_VERSION}
+FROM nvidia/cuda:${CUDA_VERSION}-cudnn8-devel-ubuntu${UBUNTU_VERSION}
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -30,13 +29,13 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python && \
 
 WORKDIR /workspace
 
-# Install PyTorch for CUDA
+# Install PyTorch for CUDA 12.1
 ARG PYTORCH_VERSION
 RUN pip install --no-cache-dir \
     "torch==${PYTORCH_VERSION}" \
     "torchvision" \
     "torchaudio" \
-    --index-url https://download.pytorch.org/whl/cu124
+    --index-url https://download.pytorch.org/whl/cu121
 
 # Project Python deps
 COPY requirements.txt .

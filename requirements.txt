@@ -3,7 +3,8 @@
 # Install with:  pip install -r requirements.txt
 #
 # For NVIDIA CUDA:
-#   pip install torch torchvision torchaudio
+#   pip install torch torchvision torchaudio \
+#       --index-url https://download.pytorch.org/whl/cu121
 #
 # For AMD ROCm (e.g. ROCm 6.2):
 #   pip install torch torchvision torchaudio \
@@ -27,10 +28,10 @@ websockets
 
 # Image utilities
 Pillow
-torchvision    # also brought in by PyTorch wheel
 
 # Metrics
-lpipsPyTorch
+# lpipsPyTorch has no PyPI wheel for Python 3.10; install from source.
+lpipsPyTorch @ git+https://github.com/S-aiueo32/lpipsPyTorch.git
 
 # Logging / visualisation
 tensorboard
