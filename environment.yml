@@ -4,16 +4,49 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - cudatoolkit=11.6
+  # Core Python
+  - python=3.10
+  - pip>=23.0
+
+  # Numerical / ML
+  - numpy
   - plyfile
-  - python=3.7.13
-  - pip=22.3.1
-  - pytorch=1.12.1
-  - torchaudio=0.12.1
-  - torchvision=0.13.1
   - tqdm
   - websockets
+  - scipy          # used for distCUDA2 fallback (KNN initialisation)
+
+  # PyTorch – install the platform-appropriate wheel via pip (see below).
+  # Uncomment ONE of the pip blocks that matches your hardware.
   - pip:
+    # ---------------------------------------------------------------
+    # NVIDIA CUDA 12.x  (default – also works on ROCm via overrides)
+    # ---------------------------------------------------------------
+    - torch>=2.1.0
+    - torchvision>=0.16.0
+    - torchaudio>=2.1.0
+
+    # ---------------------------------------------------------------
+    # Project submodules (compiled C++/CUDA/HIP extensions)
+    # ---------------------------------------------------------------
     - submodules/diff-gaussian-rasterization_fastgs
     - submodules/simple-knn
     - submodules/fused-ssim
+
+    # ---------------------------------------------------------------
+    # Other Python dependencies
+    # ---------------------------------------------------------------
+    - lpipsPyTorch
+    - tensorboard
+
+# -----------------------------------------------------------------------
+# AMD ROCm users
+# -----------------------------------------------------------------------
+# Replace the pip torch/torchvision/torchaudio lines above with:
+#
+#   - torch>=2.1.0 --index-url https://download.pytorch.org/whl/rocm6.2
+#   - torchvision>=0.16.0 --index-url https://download.pytorch.org/whl/rocm6.2
+#   - torchaudio>=2.1.0 --index-url https://download.pytorch.org/whl/rocm6.2
+#
+# Or set the FASTGS_DEVICE environment variable to control which device is used:
+#   export FASTGS_DEVICE=cuda      # NVIDIA / AMD ROCm (default auto-detect)
+#   export FASTGS_DEVICE=cpu       # Force CPU (no GPU acceleration)

@@ -19,7 +19,11 @@
 #include "device_launch_parameters.h"
 #include <cub/cub.cuh>
 #include <cub/device/device_radix_sort.cuh>
-#define GLM_FORCE_CUDA
+// Use GLM_FORCE_HIP when compiling with hipcc (AMD ROCm), otherwise
+// GLM_FORCE_CUDA for nvcc (NVIDIA).  The macro is injected via setup.py.
+#if !defined(GLM_FORCE_CUDA) && !defined(GLM_FORCE_HIP)
+#  define GLM_FORCE_CUDA
+#endif
 #include <glm/glm.hpp>
 
 #include <cooperative_groups.h>
