@@ -30,8 +30,7 @@ websockets
 Pillow
 
 # Metrics
-# lpipsPyTorch has no PyPI wheel for Python 3.10; install from source.
-lpipsPyTorch @ git+https://github.com/S-aiueo32/lpipsPyTorch.git
+lpips
 
 # Logging / visualisation
 tensorboard

@@ -15,7 +15,7 @@ from PIL import Image
 import torch
 import torchvision.transforms.functional as tf
 from utils.loss_utils import ssim
-from lpipsPyTorch import lpips
+import lpips as _lpips_pkg
 import json
 from tqdm import tqdm
 from utils.image_utils import psnr
@@ -41,6 +41,8 @@ def evaluate(model_paths):
     full_dict_polytopeonly = {}
     per_view_dict_polytopeonly = {}
     print("")
+
+    lpips_vgg = _lpips_pkg.LPIPS(net='vgg').to(DEVICE)
 
     for scene_dir in model_paths:
         try:
@@ -72,7 +74,7 @@ def evaluate(model_paths):
                 for idx in tqdm(range(len(renders)), desc="Metric evaluation progress"):
                     ssims.append(ssim(renders[idx], gts[idx]))
                     psnrs.append(psnr(renders[idx], gts[idx]))
-                    lpipss.append(lpips(renders[idx], gts[idx], net_type='vgg'))
+                    lpipss.append(lpips_vgg(renders[idx], gts[idx]).item())
 
                 print("  SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
                 print("  PSNR : {:>12.7f}".format(torch.tensor(psnrs).mean(), ".5"))
