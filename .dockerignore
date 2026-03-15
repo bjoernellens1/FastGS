@@ -1,0 +1,17 @@
+# Ignore large data and output files
+output/
+data/
+
+# Python build artifacts
+**/__pycache__/
+**/*.py[cod]
+**/*.so
+**/*.egg-info/
+**/dist/
+**/build/
+
+# Jupyter
+**/.ipynb_checkpoints/
+
+# Git submodule build products
+submodules/*/build/

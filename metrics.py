@@ -15,11 +15,12 @@ from PIL import Image
 import torch
 import torchvision.transforms.functional as tf
 from utils.loss_utils import ssim
-from lpipsPyTorch import lpips
+import lpips as _lpips_pkg
 import json
 from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser
+from utils.device_utils import DEVICE
 
 def readImages(renders_dir, gt_dir):
     renders = []
@@ -28,8 +29,8 @@ def readImages(renders_dir, gt_dir):
     for fname in os.listdir(renders_dir):
         render = Image.open(renders_dir / fname)
         gt = Image.open(gt_dir / fname)
-        renders.append(tf.to_tensor(render).unsqueeze(0)[:, :3, :, :].cuda())
-        gts.append(tf.to_tensor(gt).unsqueeze(0)[:, :3, :, :].cuda())
+        renders.append(tf.to_tensor(render).unsqueeze(0)[:, :3, :, :].to(DEVICE))
+        gts.append(tf.to_tensor(gt).unsqueeze(0)[:, :3, :, :].to(DEVICE))
         image_names.append(fname)
     return renders, gts, image_names
 
@@ -40,6 +41,8 @@ def evaluate(model_paths):
     full_dict_polytopeonly = {}
     per_view_dict_polytopeonly = {}
     print("")
+
+    lpips_vgg = _lpips_pkg.LPIPS(net='vgg').to(DEVICE)
 
     for scene_dir in model_paths:
         try:
@@ -71,7 +74,7 @@ def evaluate(model_paths):
                 for idx in tqdm(range(len(renders)), desc="Metric evaluation progress"):
                     ssims.append(ssim(renders[idx], gts[idx]))
                     psnrs.append(psnr(renders[idx], gts[idx]))
-                    lpipss.append(lpips(renders[idx], gts[idx], net_type='vgg'))
+                    lpipss.append(lpips_vgg(renders[idx], gts[idx]).item())
 
                 print("  SSIM : {:>12.7f}".format(torch.tensor(ssims).mean(), ".5"))
                 print("  PSNR : {:>12.7f}".format(torch.tensor(psnrs).mean(), ".5"))
@@ -93,8 +96,9 @@ def evaluate(model_paths):
             print("Unable to compute metrics for model", scene_dir)
 
 if __name__ == "__main__":
-    device = torch.device("cuda:0")
-    torch.cuda.set_device(device)
+    device = DEVICE
+    if device.type == "cuda":
+        torch.cuda.set_device(device)
 
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")

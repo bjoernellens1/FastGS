@@ -25,6 +25,7 @@ from tqdm import tqdm
 from utils.image_utils import psnr
 from argparse import ArgumentParser, Namespace
 from arguments import ModelParams, PipelineParams, OptimizationParams
+from utils.device_utils import DEVICE, DeviceTimer, synchronize, empty_cache
 try:
     from torch.utils.tensorboard import SummaryWriter
     TENSORBOARD_FOUND = True
@@ -45,23 +46,22 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         gaussians.restore(model_params, opt)
 
     bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
-    background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+    background = torch.tensor(bg_color, dtype=torch.float32, device=DEVICE)
 
-    iter_start = torch.cuda.Event(enable_timing = True)
-    iter_end = torch.cuda.Event(enable_timing = True)
+    iter_timer = DeviceTimer(DEVICE)
+    optim_timer = DeviceTimer(DEVICE)
 
     viewpoint_stack = scene.getTrainCameras().copy()
     viewpoint_indices = list(range(len(viewpoint_stack)))
 
     # record time
-    optim_start = torch.cuda.Event(enable_timing=True)
-    optim_end = torch.cuda.Event(enable_timing=True)
+    optim_timer2 = DeviceTimer(DEVICE)
     total_time = 0.0
 
     ema_loss_for_log = 0.0
     progress_bar = tqdm(range(first_iter, opt.iterations), desc="Training progress")
     first_iter += 1
-    bg = torch.rand((3), device="cuda") if opt.random_background else background
+    bg = torch.rand((3), device=DEVICE) if opt.random_background else background
 
     for iteration in range(first_iter, opt.iterations + 1):
 
@@ -73,7 +73,7 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                 network_gui_ws.latest_height = cam.image_height
                 network_gui_ws.latest_result = net_image_bytes = memoryview((torch.clamp(net_image, min=0, max=1.0) * 255).byte().permute(1, 2, 0).contiguous().cpu().numpy())
 
-        iter_start.record()
+        iter_timer.record_start()
         
         gaussians.update_learning_rate(iteration)
 
@@ -97,13 +97,13 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
         image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
 
         # Loss
-        gt_image = viewpoint_cam.original_image.cuda()
+        gt_image = viewpoint_cam.original_image.to(DEVICE)
         Ll1 = l1_loss(image, gt_image)
         ssim_value = fast_ssim(image.unsqueeze(0), gt_image.unsqueeze(0))
         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim_value)
         loss.backward()
 
-        iter_end.record()
+        iter_timer.record_end()
 
         with torch.no_grad():
             # Progress bar
@@ -114,14 +114,14 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
             if iteration == opt.iterations:
                 progress_bar.close()
 
-            iter_time = iter_start.elapsed_time(iter_end)
+            iter_time = iter_timer.elapsed_ms()
             # Log and save
             # training_report(tb_writer, iteration, Ll1, loss, l1_loss, iter_time, testing_iterations, scene, render_fastgs, (pipe, background, opt.mult))
             if (iteration in saving_iterations):
                 print("\n[ITER {}] Saving Gaussians".format(iteration))
                 scene.save(iteration)
             
-            optim_start.record()
+            optim_timer2.record_start()
             
             # Densification
             if iteration < opt.densify_until_iter:
@@ -167,9 +167,9 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations, checkpoi
                     gaussians.optimizer.zero_grad(set_to_none = True)
 
             # record time
-            optim_end.record()
-            torch.cuda.synchronize()
-            optim_time = optim_start.elapsed_time(optim_end)
+            optim_timer2.record_end()
+            synchronize(DEVICE)
+            optim_time = optim_timer2.elapsed_ms()
             total_time += (iter_time + optim_time) / 1e3
 
     # scene.save(iteration)
@@ -206,7 +206,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
 
     # Report test and samples of training set
     if iteration in testing_iterations:
-        torch.cuda.empty_cache()
+        empty_cache()
         validation_configs = ({'name': 'test', 'cameras' : scene.getTestCameras()}, 
                               {'name': 'train', 'cameras' : [scene.getTrainCameras()[idx % len(scene.getTrainCameras())] for idx in range(5, 30, 5)]})
 
@@ -216,7 +216,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
                 psnr_test, ssim_test, lpips_test = 0.0, 0.0, 0.0
                 for idx, viewpoint in enumerate(config['cameras']):
                     image = torch.clamp(renderFunc(viewpoint, scene.gaussians, *renderArgs)["render"], 0.0, 1.0)
-                    gt_image = torch.clamp(viewpoint.original_image.to("cuda"), 0.0, 1.0)
+                    gt_image = torch.clamp(viewpoint.original_image.to(DEVICE), 0.0, 1.0)
                     if tb_writer and (idx < 5):
                         tb_writer.add_images(config['name'] + "_view_{}/render".format(viewpoint.image_name), image[None], global_step=iteration)
                         if iteration == testing_iterations[0]:
@@ -239,7 +239,7 @@ def training_report(tb_writer, iteration, Ll1, loss, l1_loss, elapsed, testing_i
         if tb_writer:
             tb_writer.add_histogram("scene/opacity_histogram", scene.gaussians.get_opacity, iteration)
             tb_writer.add_scalar('total_points', scene.gaussians.get_xyz.shape[0], iteration)
-        torch.cuda.empty_cache()
+        empty_cache()
 
 if __name__ == "__main__":
     # Set up command line argument parser

@@ -13,18 +13,18 @@ import torch
 import math
 from scene.gaussian_model import GaussianModel
 from utils.sh_utils import eval_sh
+from utils.device_utils import DEVICE
 from diff_gaussian_rasterization_fastgs import GaussianRasterizationSettings, GaussianRasterizer
 
 def render_fastgs(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor, mult, scaling_modifier = 1.0, override_color = None, get_flag=None, metric_map = None):
     """
     Render the scene. 
     
-    Background tensor (bg_color) must be on GPU!
+    Background tensor (bg_color) must be on the active compute device!
     """
  
     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
-    # screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
-    screenspace_points = torch.zeros((pc.get_xyz.shape[0], 4), dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
+    screenspace_points = torch.zeros((pc.get_xyz.shape[0], 4), dtype=pc.get_xyz.dtype, requires_grad=True, device=DEVICE) + 0
     try:
         screenspace_points.retain_grad()
     except:
@@ -34,8 +34,8 @@ def render_fastgs(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.T
     tanfovx = math.tan(viewpoint_camera.FoVx * 0.5)
     tanfovy = math.tan(viewpoint_camera.FoVy * 0.5)
 
-    if metric_map==None:
-        metric_map=torch.zeros(int(viewpoint_camera.image_height)*int(viewpoint_camera.image_width), dtype=torch.int, device='cuda')
+    if metric_map is None:
+        metric_map=torch.zeros(int(viewpoint_camera.image_height)*int(viewpoint_camera.image_width), dtype=torch.int, device=DEVICE)
 
     raster_settings = GaussianRasterizationSettings(
         image_height=int(viewpoint_camera.image_height),

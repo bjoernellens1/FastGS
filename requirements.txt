@@ -1,0 +1,39 @@
+# FastGS Python dependencies
+# --------------------------------------------------------------------
+# Install with:  pip install -r requirements.txt
+#
+# For NVIDIA CUDA:
+#   pip install torch torchvision torchaudio \
+#       --index-url https://download.pytorch.org/whl/cu121
+#
+# For AMD ROCm (e.g. ROCm 6.2):
+#   pip install torch torchvision torchaudio \
+#       --index-url https://download.pytorch.org/whl/rocm6.2
+#
+# Then install project dependencies:
+#   pip install -r requirements.txt
+#
+# Finally build the C++ / CUDA / HIP extensions:
+#   pip install submodules/diff-gaussian-rasterization_fastgs
+#   pip install submodules/simple-knn
+#   pip install submodules/fused-ssim
+# --------------------------------------------------------------------
+
+# Core numerical / ML
+numpy
+scipy          # used for distCUDA2 KNN fallback on non-CUDA builds
+plyfile
+tqdm
+websockets
+
+# Image utilities
+Pillow
+
+# Metrics
+lpips
+
+# Logging / visualisation
+tensorboard
+
+# (optional) point-cloud tooling for convert.py
+# open3d
