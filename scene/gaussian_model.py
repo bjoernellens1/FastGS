@@ -28,7 +28,7 @@ try:
     from simple_knn._C import distCUDA2
 except Exception:
     def distCUDA2(points: torch.Tensor) -> torch.Tensor:
-        """Pure-PyTorch fallback for distCUDA2.
+        """Vendor-agnostic KNN distance initialiser (replaces simple_knn._C.distCUDA2).
 
         Computes the mean squared distance to the 3 nearest neighbours for
         every point.  Used only during Gaussian initialisation so performance
@@ -46,7 +46,7 @@ except Exception:
         except ImportError:
             pass
 
-        # Last-resort: chunked PyTorch implementation
+        # Last-resort: chunked PyTorch implementation (no scipy dependency)
         N = points.shape[0]
         k = min(3, N - 1)
         if N <= 1:

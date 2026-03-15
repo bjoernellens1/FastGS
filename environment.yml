@@ -8,18 +8,20 @@ dependencies:
   - python=3.10
   - pip>=23.0
 
-  # Numerical / ML
+  # Numerical / ML (via conda for better dependency resolution)
   - numpy
   - plyfile
   - tqdm
   - websockets
   - scipy          # used for distCUDA2 fallback (KNN initialisation)
 
-  # PyTorch – install the platform-appropriate wheel via pip (see below).
-  # Uncomment ONE of the pip blocks that matches your hardware.
+  # PyTorch – install the platform-appropriate wheel via pip below.
+  # Using pip inside conda is intentional here; PyTorch ships its own CUDA/ROCm
+  # bundles that are not always available in conda-forge.  For a fully conda-
+  # managed environment, replace the pip block with the pytorch channel packages.
   - pip:
     # ---------------------------------------------------------------
-    # NVIDIA CUDA 12.x  (default – also works on ROCm via overrides)
+    # NVIDIA CUDA 12.x  (default)
     # ---------------------------------------------------------------
     - torch>=2.1.0
     - torchvision>=0.16.0
@@ -50,3 +52,9 @@ dependencies:
 # Or set the FASTGS_DEVICE environment variable to control which device is used:
 #   export FASTGS_DEVICE=cuda      # NVIDIA / AMD ROCm (default auto-detect)
 #   export FASTGS_DEVICE=cpu       # Force CPU (no GPU acceleration)
+#
+# Pure pip alternative (avoids conda/pip conflicts):
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#   pip install torch torchvision torchaudio  # add --index-url for ROCm
+#   pip install submodules/diff-gaussian-rasterization_fastgs submodules/simple-knn submodules/fused-ssim
